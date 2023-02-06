@@ -46,7 +46,7 @@ vxt_system *sys = NULL;
 struct vxt_pirepheral *disk = NULL;
 struct vxt_pirepheral *ppi = NULL;
 struct vxt_pirepheral *cga = NULL;
-struct vxt_pirepheral *mouse = NULL;
+struct vxt_pirepheral *serial = NULL;
 
 static int log_wrapper(const char *fmt, ...) {
 	va_list args;
@@ -184,7 +184,8 @@ void send_mouse(int xrel, int yrel, unsigned int buttons) {
 		ev.buttons |= VXTP_MOUSE_LEFT;
 	if (buttons & 2)
 		ev.buttons |= VXTP_MOUSE_RIGHT;
-	vxtp_mouse_push_event(mouse, &ev);
+	if (serial)
+    	vxtp_mouse_push_event(serial, &ev);
 }
 
 void step_emulation(int cycles) {
@@ -207,7 +208,13 @@ void initialize_emulator(void) {
 	vxtp_ppi_set_speaker_callback(ppi, &speaker_callback, NULL);
 
     cga = vxtp_cga_create(&ALLOCATOR, &ustimer);
-	mouse = vxtp_mouse_create(&ALLOCATOR, 0x3F8, 4); // COM1
+
+	// COM1
+    #ifdef VXTP_SERIAL_DBG
+		serial = vxtp_serial_dbg_create(&realloc, 0x3F8);
+	#else
+		serial = vxtp_mouse_create(&ALLOCATOR, 0x3F8, 4);
+	#endif
 
 	struct vxt_pirepheral *devices[] = {
 		vxtu_memory_create(&ALLOCATOR, 0x0, 0x100000, false),
@@ -220,7 +227,7 @@ void initialize_emulator(void) {
         ppi,
 		cga,
         disk,
-		mouse,
+		serial,
 		NULL
 	};
 

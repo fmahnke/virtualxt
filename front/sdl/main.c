@@ -563,7 +563,7 @@ int ENTRY(int argc, char *argv[]) {
 	struct vxt_pirepheral *fdc = vxtp_fdc_create(&realloc, &ustimer, 0x3F0, 6);
 	struct vxt_pirepheral *pit = vxtp_pit_create(&realloc, &ustimer);
 	struct vxt_pirepheral *ppi = vxtp_ppi_create(&realloc, pit);
-	struct vxt_pirepheral *mouse = vxtp_mouse_create(&realloc, 0x3F8, 4); // COM1
+	struct vxt_pirepheral *mouse = NULL;
 	struct vxt_pirepheral *adlib = args.no_adlib ? NULL : vxtp_adlib_create(&realloc);
 	struct vxt_pirepheral *joystick = NULL;
 
@@ -613,7 +613,13 @@ int ENTRY(int argc, char *argv[]) {
 	devices[i++] = vxtp_rtc_create(&realloc);
 	devices[i++] = vxtp_ctrl_create(&realloc, &emu_control, NULL);
 	devices[i++] = pit;
-	devices[i++] = mouse;
+
+	#ifdef VXTP_SERIAL_DBG // COM1
+		devices[i++] = vxtp_serial_dbg_create(&realloc, 0x3F8);
+	#else
+		devices[i++] = mouse = vxtp_mouse_create(&realloc, 0x3F8, 4);
+	#endif
+
 	devices[i++] = ppi;
 	devices[i++] = video.device;
 
@@ -756,7 +762,9 @@ int ENTRY(int argc, char *argv[]) {
 							ev.buttons |= VXTP_MOUSE_LEFT;
 						if (state & SDL_BUTTON_RMASK)
 							ev.buttons |= VXTP_MOUSE_RIGHT;
-						SYNC(vxtp_mouse_push_event(mouse, &ev));
+						#ifndef VXTP_SERIAL_DBG
+							SYNC(vxtp_mouse_push_event(mouse, &ev));
+						#endif
 					}
 					break;
 				case SDL_MOUSEBUTTONDOWN:
@@ -772,7 +780,9 @@ int ENTRY(int argc, char *argv[]) {
 							ev.buttons |= VXTP_MOUSE_LEFT;
 						if (e.button.button == SDL_BUTTON_RIGHT)
 							ev.buttons |= VXTP_MOUSE_RIGHT;
-						SYNC(vxtp_mouse_push_event(mouse, &ev));
+						#ifndef VXTP_SERIAL_DBG
+							SYNC(vxtp_mouse_push_event(mouse, &ev));
+						#endif
 					}
 					break;
 				case SDL_DROPFILE:

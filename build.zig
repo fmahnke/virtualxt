@@ -155,6 +155,7 @@ pub fn build(b: *Builder) void {
     const sdl_path = b.option([]const u8, "sdl-path", "Path to SDL2 headers and libs") orelse null;
     const cpu286 = b.option(bool, "at", "Enable Intel 286 and IBM AT support") orelse false;
     const cpuV20 = b.option(bool, "v20", "Enable NEC V20 CPU support") orelse false;
+    const serial_dbg = b.option(bool, "serial-dbg", "Enable COM1 debug printer (replaces mouse)") orelse false;
 
     const mode = b.standardReleaseOptions();
     const target = b.standardTargetOptions(.{});
@@ -218,7 +219,6 @@ pub fn build(b: *Builder) void {
         pirepheral.addCSourceFile("lib/vxtp/cga.c", opt);
         pirepheral.addCSourceFile("lib/vxtp/vga.c", opt);
         pirepheral.addCSourceFile("lib/vxtp/rifs.c", opt);
-        pirepheral.addCSourceFile("lib/vxtp/mouse.c", opt);
         pirepheral.addCSourceFile("lib/vxtp/joystick.c", opt);
         pirepheral.addCSourceFile("lib/vxtp/post.c", opt);
         pirepheral.addCSourceFile("lib/vxtp/rtc.c", opt);
@@ -230,6 +230,13 @@ pub fn build(b: *Builder) void {
             pirepheral.defineCMacroRaw("VXTP_NETWORK");
             pirepheral.addCSourceFile("lib/vxtp/network.c", opt);
             pirepheral.linkSystemLibrary("pcap");
+        }
+
+        if (serial_dbg) {
+            pirepheral.defineCMacroRaw("VXTP_SERIAL_DBG");
+            pirepheral.addCSourceFile("lib/vxtp/serial_dbg.c", opt);
+        } else {
+            pirepheral.addCSourceFile("lib/vxtp/mouse.c", opt);
         }
 
         pirepheral.linkLibrary(opl3);
@@ -306,6 +313,10 @@ pub fn build(b: *Builder) void {
 
     if (network) {
         exe_sdl.defineCMacroRaw("VXTP_NETWORK");
+    }
+
+    if (serial_dbg) {
+        exe_sdl.defineCMacroRaw("VXTP_SERIAL_DBG");
     }
 
     // -------- virtualxt libretro --------
@@ -392,6 +403,10 @@ pub fn build(b: *Builder) void {
 
         if (cpuV20) {
             wasm.defineCMacroRaw("VXT_CPU_V20");
+        }
+
+        if (serial_dbg) {
+            wasm.defineCMacroRaw("VXTP_SERIAL_DBG");
         }
 
         wasm.linkLibrary(build_libvxt(b, mode, wasm_target, false, cpuV20, false));
